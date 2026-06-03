@@ -14,30 +14,31 @@
       font-family: Arial, sans-serif;
       color: white;
       overflow: hidden;
+      transform: scaleX(-1);
+      transform-origin: center center;
     }
 
     model-viewer {
       width: 100vw;
       height: 100vh;
       background-color: black;
-      transform: scaleX(-1);
-      transform-origin: center center;
     }
 
-    /* Todos os overlays de texto contra-espelham o model-viewer */
-    .topbar,
+    /* Contra-espelha só o texto — posição e layout não mudam */
+    .topbar button,
     #hint,
-    #panel,
-    #overlay,
-    #segLabel,
+    #panel *,
+    .seg-label-name,
+    .seg-label-size,
+    .hotspot .tooltip,
     #debugBtn,
     #debug {
+      display: inline-block;
       transform: scaleX(-1);
     }
-
-    /* Corrige o translateX(-50%) da topbar e hint após o scaleX */
-    .topbar { transform: scaleX(-1) translateX(50%); }
-    #hint   { transform: scaleX(-1) translateX(50%); }
+    /* panel e hint são block, não inline-block */
+    #hint          { display: block; }
+    #panel *       { display: revert; transform: scaleX(-1); }
 
     .topbar {
       position: absolute;
@@ -444,7 +445,7 @@ function showSegLabel(clientX, clientY, seg) {
   requestAnimationFrame(() => {
     const w = segLabel.offsetWidth;
     const h = segLabel.offsetHeight;
-    segLabel.style.left = (clientX - w / 2) + "px";
+    segLabel.style.left = (window.innerWidth - clientX - w / 2) + "px";
     segLabel.style.top  = (clientY - h - 16) + "px";
   });
 
