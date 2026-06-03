@@ -27,18 +27,14 @@
     /* Contra-espelha só o texto — posição e layout não mudam */
     .topbar button,
     #hint,
-    #panel *,
+    #panel,
     .seg-label-name,
     .seg-label-size,
     .hotspot .tooltip,
     #debugBtn,
     #debug {
-      display: inline-block;
       transform: scaleX(-1);
     }
-    /* panel e hint são block, não inline-block */
-    #hint          { display: block; }
-    #panel *       { display: revert; transform: scaleX(-1); }
 
     .topbar {
       position: absolute;
