@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Visualizador 3D Ósseo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: black;
+      font-family: Arial, sans-serif;
+      color: white;
+      overflow: hidden;
+      transform: scaleX(-1);
+      transform-origin: center center;
+    }
+
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      background-color: black;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 9999;
+      justify-content: center;
+      padding: 0 12px;
+      width: calc(100% - 24px);
+    }
+
+    .topbar button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(30,30,30,0.85);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      white-space: nowrap;
+    }
+    .topbar button.active { background: #0a84ff; }
+
+    /* hint "toca para ocultar" — aparece só em modelos com anomalias */
+    #hint {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%) scaleX(-1); /* contra-espelha o body */
+      background: rgba(0,0,0,0.65);
+      color: #ccc;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s;
+      white-space: nowrap;
+      z-index: 9999;
+    }
+    #hint.visible { opacity: 1; }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 10000;
+    }
+    #overlay.open { display: block; }
+
+    #panel {
+      position: fixed;
+      top: 0;
+      right: -360px;
+      width: 340px;
+      height: 100%;
+      background: rgba(18,18,18,0.97);
+      backdrop-filter: blur(16px);
+      z-index: 10001;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.3s ease;
+      border-left: 0.5px solid rgba(255,255,255,0.08);
+    }
+    #panel.open { right: 0; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 18px 14px;
+      border-bottom: 0.5px solid rgba(255,255,255,0.08);
+    }
+    .panel-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    #closeBtn { background: none; border: none; color: #aaa; font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px; }
+
+    .panel-body { overflow-y: auto; flex: 1; padding: 12px 0; }
+
+    .category { margin-bottom: 4px; }
+    .category-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 18px; cursor: pointer; user-select: none; transition: background 0.15s;
+    }
+    .category-header:hover { background: rgba(255,255,255,0.05); }
+    .category-header span { font-size: 14px; font-weight: 600; color: #e0e0e0; }
+    .category-header .arrow { font-size: 11px; color: #666; transition: transform 0.2s; }
+    .category.open .arrow { transform: rotate(180deg); }
+    .model-list { display: none; padding: 4px 0 8px; }
+    .category.open .model-list { display: block; }
+    .model-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 18px 9px 28px; cursor: pointer; transition: background 0.15s;
+    }
+    .model-item:hover { background: rgba(255,255,255,0.05); }
+    .model-item.active { background: rgba(10,132,255,0.15); }
+    .model-dot { width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0; transition: background 0.15s; }
+    .model-item.active .model-dot { background: #0a84ff; }
+    .model-item span { font-size: 13px; color: #ccc; }
+    .model-item.active span { color: white; }
+
+    /* ── SEGMENT LABEL TOOLTIP ── */
+    #segLabel {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    #segLabel.visible { opacity: 1; }
+
+    .seg-label-inner {
+      background: rgba(0, 0, 0, 0.88);
+      border: 2px solid var(--lcolor, #0a84ff);
+      border-radius: 10px;
+      padding: 10px 16px;
+      text-align: center;
+      box-shadow: 0 0 14px rgba(10,132,255,0.35);
+      white-space: nowrap;
+    }
+    .seg-label-name {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: white;
+      text-shadow: 0 0 8px var(--lcolor, #0a84ff);
+    }
+    .seg-label-size {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 2px;
+    }
+    .seg-label-arrow {
+      width: 0; height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 8px solid var(--lcolor, #0a84ff);
+      margin: 0 auto;
+    }
+
+    .hotspot {
+      width: 54px; height: 54px; border-radius: 50%; background: transparent;
+      border: none; cursor: pointer; padding: 0; position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hotspot::before {
+      content: ''; width: 18px; height: 18px; border-radius: 50%;
+      background: #0a84ff; border: 3px solid white;
+      box-shadow: 0 0 10px rgba(10,132,255,0.8), 0 0 20px rgba(10,132,255,0.4);
+      transition: transform 0.15s;
+    }
+    .hotspot:hover::before, .hotspot.active::before { transform: scale(1.3); }
+
+    .hotspot-seg::before { display: none; }
+    .hotspot-seg { width: 60px; height: 60px; cursor: pointer; }
+
+    .hotspot .tooltip {
+      position: absolute; bottom: calc(100% - 4px); left: 50%;
+      transform: translateX(-50%); background: #000; color: white;
+      padding: 12px 22px; border-radius: 10px; font-size: 24px; font-weight: 700;
+      letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; opacity: 0;
+      transition: opacity 0.15s; border: 2px solid rgba(10,132,255,0.8);
+      text-shadow: 0 0 8px rgba(10,132,255,0.9);
+    }
+    .hotspot .tooltip::after {
+      content: ''; position: absolute; top: 100%; left: 50%;
+      transform: translateX(-50%); border: 6px solid transparent;
+      border-top-color: rgba(10,132,255,0.7);
+    }
+    .hotspot.active .tooltip { opacity: 1; }
+
+    #debugBtn {
+      position: absolute; bottom: 12px; left: 12px; z-index: 9999;
+      padding: 8px 12px; border: none; border-radius: 8px;
+      background: rgba(30,30,30,0.85); color: #aaa; font-size: 12px;
+      cursor: pointer; backdrop-filter: blur(6px);
+    }
+    #debugBtn.active { color: #00ff88; }
+
+    #debug {
+      position: fixed; bottom: 50px; left: 12px;
+      background: rgba(0,0,0,0.85); color: #00ff88; padding: 10px 14px;
+      border-radius: 10px; font: 13px monospace; z-index: 9999; display: none; max-width: 280px;
+    }
+
+    @media (max-width: 600px) {
+      #panel { width: 100%; right: -100%; }
+      .topbar button { font-size: 13px; padding: 9px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button id="btn0" onclick="loadModel('foot__ankle.glb', this)">Model 1</button>
+  <button id="btn1" onclick="loadModel('Segmentation.glb', this)">Model 2</button>
+  <button id="openPanelBtn" onclick="openPanel()">Cases ▾</button>
+</div>
+
+<div id="hint"></div>
+
+<div id="overlay" onclick="closePanel()"></div>
+
+<div id="panel">
+  <div class="panel-header">
+    <h2>Fractures types</h2>
+    <button id="closeBtn" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+
+<div id="segLabel">
+  <div class="seg-label-inner" id="segLabelInner">
+    <div class="seg-label-name" id="segLabelName"></div>
+    <div class="seg-label-size" id="segLabelSize"></div>
+  </div>
+  <div class="seg-label-arrow" id="segLabelArrow"></div>
+</div>
+
+<button onclick="toggleDebug()" id="debugBtn">⚙ Debug</button>
+<div id="debug">
+  <b style="color:white">Coordenadas 3D</b>
+  <pre id="coords" style="margin:4px 0 0;">Clica num osso...</pre>
+</div>
+
+<model-viewer
+  id="viewer"
+  src="foot__ankle.glb"
+  camera-controls
+  disable-pan
+  auto-rotate
+  min-field-of-view="10deg"
+  max-field-of-view="60deg"
+  exposure="2.2"
+  shadow-intensity="0"
+  tone-mapping="commerce"
+  environment-image="legacy">
+</model-viewer>
+
+<script>
+// ── Config de segmentos/anomalias por modelo ───────────────────
+const segmentConfig = {
+
+  "Segmentation1_6.glb": {
+    segments: [
+      { primitiveIndex: 1, label: "Corpo Livre",              size: "", color: "#ff4d4d", pos: "-16.6481m 10.1325m -2.3308m"   },
+      { primitiveIndex: 2, label: "Megessostose",             size: "", color: "#ffaa00", pos: "12.4892m 6.0165m -62.8223m"    },
+      { primitiveIndex: 3, label: "Fratura Falange Proximal", size: "", color: "#00e5ff", pos: "34.1863m -72.1478m 87.9066m"   },
+    ]
+  },
+
+  "Segmentation2_1.glb": {
+    segments: [
+      { primitiveIndex: 1, label: "Corpo Livre", size: "", color: "#ff4d4d", pos: "1.8802m 44.6687m -60.8941m"   },
+      { primitiveIndex: 2, label: "Corpo Livre", size: "", color: "#ffaa00", pos: "18.6720m -21.3461m -27.7317m" },
+      { primitiveIndex: 3, label: "Corpo Livre", size: "", color: "#00e5ff", pos: "-21.5648m 12.1754m 16.4439m"  },
+      { primitiveIndex: 4, label: "Corpo Livre", size: "", color: "#a855f7", pos: "-24.1262m 49.6685m -41.7960m" },
+      { primitiveIndex: 5, label: "Corpo Livre", size: "", color: "#22c55e", pos: "-27.0568m 40.6654m -31.7664m" },
+    ]
+  },
+
+};
+
+const fractureData = [
+  { category: "Case 1", file: "Segmentation1_6.glb" },
+  { category: "Case 2", file: "Segmentation2_1.glb" },
+  { category: "Case 3", file: "foot__ankle.glb"     },
+];
+
+const labels = {
+  "foot__ankle.glb": [
+    { name: "Tibia",                  pos: "48.6389m 398.6089m 82.0824m"  },
+    { name: "Talus",                  pos: "44.3119m 342.6386m 90.6075m"  },
+    { name: "Calcaneus",              pos: "4.1663m 312.7020m 56.0186m"   },
+    { name: "Fibula",                 pos: "13.7922m 392.3915m 80.6132m"  },
+    { name: "Cuboid",                 pos: "28.2396m 294.2169m 109.7141m" },
+    { name: "Navicular",              pos: "73.0085m 315.8295m 103.5961m" },
+    { name: "Lateral Cuneiform",      pos: "45.9150m 299.2043m 124.5743m" },
+    { name: "Intermediate Cuneiform", pos: "65.8608m 307.1748m 126.0887m" },
+    { name: "Medial Cuneiform",       pos: "84.0540m 300.2990m 116.1527m" },
+    { name: "Metatarsals",            pos: "67.2535m 264.8285m 144.6176m" },
+    { name: "Phalanges",              pos: "89.9891m 246.0670m 189.2854m" }
+  ],
+  "Segmentation.glb": [
+    { name: "Calcaneus",              pos: "217.1674m 330.6398m 121.9701m" },
+    { name: "Metatarsals",            pos: "200.3009m 226.3734m 55.0477m"  },
+    { name: "Medial Cuneiform",       pos: "217.7097m 235.4885m 101.7305m" },
+    { name: "Intermediate Cuneiform", pos: "203.0571m 240.8632m 102.4432m" },
+    { name: "Lateral Cuneiform",      pos: "191.4797m 253.4175m 94.6800m"  },
+    { name: "Cuboid",                 pos: "190.8230m 274.5233m 95.1903m"  },
+    { name: "Navicular",              pos: "212.0251m 246.8283m 116.2747m" },
+    { name: "Talus",                  pos: "208.1384m 258.6282m 132.5206m" },
+    { name: "Phalanges",              pos: "196.0303m 179.0980m 28.0663m"  }
+  ]
+};
+
+// ── Estado ─────────────────────────────────────────────────────
+let currentModel    = null;
+let debugMode       = false;
+let activeModelItem = null;
+let labelTimeout    = null;
+// Set de primitiveIndex dos ossos ocultados pelo utilizador
+let hiddenPrimitives = new Set();
+// Guarda cor original por primitiveIndex: { r, g, b, a, alphaMode }
+let originalMaterialState = {};
+
+const viewer        = document.getElementById("viewer");
+const segLabel      = document.getElementById("segLabel");
+const segLabelInner = document.getElementById("segLabelInner");
+const labelName     = document.getElementById("segLabelName");
+const labelSize     = document.getElementById("segLabelSize");
+const labelArrow    = document.getElementById("segLabelArrow");
+const hint          = document.getElementById("hint");
+
+// ── Helpers de material ────────────────────────────────────────
+
+function getMaterial(primitiveIndex) {
+  return viewer.model?.materials?.[primitiveIndex] ?? null;
+}
+
+function saveMaterialState(primitiveIndex) {
+  if (originalMaterialState[primitiveIndex] !== undefined) return; // já guardado
+  const mat = getMaterial(primitiveIndex);
+  if (!mat) return;
+  const pbr = mat.pbrMetallicRoughness;
+  const c   = pbr?.baseColorFactor ?? [1, 1, 1, 1];
+  originalMaterialState[primitiveIndex] = {
+    r: c[0], g: c[1], b: c[2], a: c[3],
+    alphaMode: mat.alphaMode ?? "OPAQUE",
+  };
+}
+
+function setMaterialAlpha(primitiveIndex, alpha) {
+  const mat = getMaterial(primitiveIndex);
+  if (!mat) return;
+  const pbr = mat.pbrMetallicRoughness;
+  if (!pbr) return;
+  mat.setAlphaMode(alpha < 1 ? "BLEND" : (originalMaterialState[primitiveIndex]?.alphaMode ?? "OPAQUE"));
+  const c = pbr.baseColorFactor ?? [1, 1, 1, 1];
+  pbr.setBaseColorFactor([c[0], c[1], c[2], alpha]);
+}
+
+function restoreMaterial(primitiveIndex) {
+  const orig = originalMaterialState[primitiveIndex];
+  if (!orig) return;
+  const mat = getMaterial(primitiveIndex);
+  if (!mat) return;
+  mat.setAlphaMode(orig.alphaMode);
+  const pbr = mat.pbrMetallicRoughness;
+  if (pbr) pbr.setBaseColorFactor([orig.r, orig.g, orig.b, orig.a]);
+}
+
+// ── Ocultar/restaurar osso pelo primitiveIndex ─────────────────
+
+function hidePrimitive(primIdx) {
+  saveMaterialState(primIdx);
+  setMaterialAlpha(primIdx, 0);
+  hiddenPrimitives.add(primIdx);
+}
+
+function restoreAllHidden() {
+  hiddenPrimitives.forEach(idx => restoreMaterial(idx));
+  hiddenPrimitives.clear();
+}
+
+// ── Anomalias do modelo actual ─────────────────────────────────
+
+function getAnomalySet() {
+  const cfg = segmentConfig[currentModel];
+  if (!cfg) return new Set();
+  return new Set(cfg.segments.map(s => s.primitiveIndex));
+}
+
+function findSegmentByPrimitive(primitiveIndex) {
+  const cfg = segmentConfig[currentModel];
+  if (!cfg) return null;
+  return cfg.segments.find(s => s.primitiveIndex === primitiveIndex) ?? null;
+}
+
+// ── Hint ───────────────────────────────────────────────────────
+let hintTimeout = null;
+
+function showHint(msg) {
+  hint.textContent = msg;
+  hint.classList.add("visible");
+  clearTimeout(hintTimeout);
+  hintTimeout = setTimeout(() => hint.classList.remove("visible"), 1500);
+}
+
+// ── Label flutuante ────────────────────────────────────────────
+
+function showSegLabel(clientX, clientY, seg) {
+  labelName.textContent = seg.label;
+  labelSize.textContent = seg.size || "";
+  labelSize.style.display = seg.size ? "block" : "none";
+
+  segLabelInner.style.setProperty("--lcolor", seg.color);
+  labelArrow.style.setProperty("--lcolor", seg.color);
+  segLabel.classList.add("visible");
+
+  requestAnimationFrame(() => {
+    const w = segLabel.offsetWidth;
+    const h = segLabel.offsetHeight;
+    segLabel.style.left = (window.innerWidth - clientX - w / 2) + "px";
+    segLabel.style.top  = (clientY - h - 16) + "px";
+  });
+
+  clearTimeout(labelTimeout);
+  labelTimeout = setTimeout(() => segLabel.classList.remove("visible"), 3500);
+}
+
+function hideSegLabel() {
+  clearTimeout(labelTimeout);
+  segLabel.classList.remove("visible");
+}
+
+// ── Viewer click ───────────────────────────────────────────────
+
+viewer.addEventListener("click", e => {
+  viewer.querySelectorAll(".hotspot").forEach(h => h.classList.remove("active"));
+
+  const rect = viewer.getBoundingClientRect();
+  const lx = e.clientX - rect.left;
+  const ly = e.clientY - rect.top;
+
+  // Debug: coordenadas 3D
+  if (debugMode) {
+    const hit = viewer.positionAndNormalFromPoint(lx, ly);
+    if (hit) {
+      const p = hit.position;
+      document.getElementById("coords").textContent =
+        `${p.x.toFixed(4)}m ${p.y.toFixed(4)}m ${p.z.toFixed(4)}m`;
+    } else {
+      document.getElementById("coords").textContent = "Nenhum osso aqui";
+    }
+  }
+
+  // Só actua se o modelo actual tem segmentos de anomalia
+  const hasSegs = !!segmentConfig[currentModel];
+
+  try {
+    const surface = viewer.surfaceFromPoint ? viewer.surfaceFromPoint(lx, ly) : null;
+    if (surface != null) {
+      const primIdx = surface.primitiveIndex ?? surface.primitive ?? 0;
+
+      if (debugMode) {
+        const matName = viewer.model?.materials?.[primIdx]?.name ?? "?";
+        document.getElementById("coords").textContent +=
+          `\nprimitive: ${primIdx}  material: ${matName}`;
+      }
+
+      if (hasSegs) {
+        const anomalies = getAnomalySet();
+
+        if (anomalies.has(primIdx)) {
+          // Clicou numa anomalia → mostrar label
+          const seg = findSegmentByPrimitive(primIdx);
+          if (seg) showSegLabel(e.clientX, e.clientY, seg);
+        } else {
+          // Clicou num osso normal → ocultar esse osso
+          saveMaterialState(primIdx);
+          hidePrimitive(primIdx);
+          hideSegLabel();
+          if (hiddenPrimitives.size > 0) showHint("Toca no fundo para repor os ossos");
+        }
+        return;
+      }
+    }
+  } catch (_) {}
+
+  // Clicou no fundo vazio — restaura todos os ossos ocultos
+  if (hasSegs && hiddenPrimitives.size > 0) {
+    restoreAllHidden();
+    hideSegLabel();
+    showHint("Toca num osso para o ocultar");
+  } else if (hasSegs) {
+    hideSegLabel();
+  }
+});
+
+// ── Modelo carregado ───────────────────────────────────────────
+
+viewer.addEventListener("load", () => {
+  // Limpa cache de estados originais (novo modelo)
+  originalMaterialState = {};
+  hiddenPrimitives.clear();
+
+  // Se o modelo tem anomalias, mostra o hint uma vez
+  if (segmentConfig[currentModel]) {
+    showHint("Toca num osso para o ocultar");
+  }
+});
+
+// ── Painel ─────────────────────────────────────────────────────
+
+function openPanel() {
+  document.getElementById("panel").classList.add("open");
+  document.getElementById("overlay").classList.add("open");
+}
+function closePanel() {
+  document.getElementById("panel").classList.remove("open");
+  document.getElementById("overlay").classList.remove("open");
+}
+
+function buildPanel() {
+  const body = document.getElementById("panelBody");
+  body.innerHTML = "";
+  fractureData.forEach(cat => {
+    const item = document.createElement("div");
+    item.className = "model-item";
+    item.style.padding = "13px 18px";
+    item.innerHTML = `<div class="model-dot"></div><span>${cat.category}</span>`;
+    item.addEventListener("click", () => {
+      if (activeModelItem) activeModelItem.classList.remove("active");
+      item.classList.add("active");
+      activeModelItem = item;
+      loadModel(cat.file, null);
+      closePanel();
+    });
+    body.appendChild(item);
+  });
+}
+
+// ── Carrega modelo ─────────────────────────────────────────────
+
+function loadModel(file, btn) {
+  document.documentElement.requestFullscreen().catch(() => {});
+  currentModel = file;
+  hideSegLabel();
+  originalMaterialState = {};
+  hiddenPrimitives.clear();
+  viewer.setAttribute("src", file);
+  createHotspots(file);
+  document.querySelectorAll(".topbar button[id^='btn']")
+    .forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+}
+
+// ── Hotspots ───────────────────────────────────────────────────
+
+function createHotspots(modelFile) {
+  viewer.querySelectorAll(".hotspot, .hotspot-seg").forEach(el => el.remove());
+
+  if (labels[modelFile]) {
+    labels[modelFile].forEach((label, i) => {
+      const div = document.createElement("div");
+      div.className = "hotspot";
+      div.slot = `hotspot-${i}`;
+      div.dataset.position = label.pos;
+      div.dataset.normal = "0 1 0";
+      const tip = document.createElement("div");
+      tip.className = "tooltip";
+      tip.textContent = label.name;
+      div.appendChild(tip);
+      div.addEventListener("click", e => {
+        e.stopPropagation();
+        const isActive = div.classList.contains("active");
+        viewer.querySelectorAll(".hotspot").forEach(h => h.classList.remove("active"));
+        if (!isActive) div.classList.add("active");
+      });
+      viewer.appendChild(div);
+    });
+  }
+
+  const config = segmentConfig[modelFile];
+  if (config) {
+    const offset = labels[modelFile] ? labels[modelFile].length : 0;
+    config.segments.forEach((seg, i) => {
+      if (!seg.pos) return;
+      const div = document.createElement("div");
+      div.className = "hotspot hotspot-seg";
+      div.slot = `hotspot-${offset + i}`;
+      div.dataset.position = seg.pos;
+      div.dataset.normal = "0 1 0";
+      div.addEventListener("click", e => {
+        e.stopPropagation();
+        showSegLabel(e.clientX, e.clientY, seg);
+      });
+      viewer.appendChild(div);
+    });
+  }
+}
+
+// ── Debug ──────────────────────────────────────────────────────
+
+function toggleDebug() {
+  debugMode = !debugMode;
+  const btn = document.getElementById("debugBtn");
+  document.getElementById("debug").style.display = debugMode ? "block" : "none";
+  btn.classList.toggle("active", debugMode);
+  btn.textContent = debugMode ? "⚙ Debug ON" : "⚙ Debug";
+}
+
+// ── Init ───────────────────────────────────────────────────────
+
+buildPanel();
+currentModel = "foot__ankle.glb";
+document.getElementById("btn0").classList.add("active");
+createHotspots("foot__ankle.glb");
+</script>
+</body>
+</html>
