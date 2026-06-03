@@ -1,0 +1,3 @@
+Projeto PIC
+
+Neste projeto foram desenvolvidos dois protótipos low-cost de visualização 3D pseudo-holográfica, utilizando a técnica de Pepper’s Ghost, para melhorar a comunicação entre médico e doente em consultas de ortopedia do pé e tornozelo. Foram utilizados ficheiros CT com segmentação realizada no 3D Slicer, exportação de modelos 3D em formato GLB e visualização interativa através de uma WebApp baseada em WebGL e . Os resultados demonstram a viabilidade de uma solução integrada entre processamento de imagem médica, visualização web e prototipagem pseudo-holográfica, propondo-se futuramente a avaliação do impacto do sistema na comunicação e compreensão do doente
