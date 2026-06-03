@@ -8,32 +8,23 @@
   <style>
     * { box-sizing: border-box; }
 
+    html {
+      transform: scaleX(-1);
+      transform-origin: center center;
+    }
+
     body {
       margin: 0;
       background: black;
       font-family: Arial, sans-serif;
       color: white;
       overflow: hidden;
-      transform: scaleX(-1);
-      transform-origin: center center;
     }
 
     model-viewer {
       width: 100vw;
       height: 100vh;
       background-color: black;
-    }
-
-    /* Contra-espelha só o texto — posição e layout não mudam */
-    .topbar button,
-    #hint,
-    #panel,
-    .seg-label-name,
-    .seg-label-size,
-    .hotspot .tooltip,
-    #debugBtn,
-    #debug {
-      transform: scaleX(-1);
     }
 
     .topbar {
@@ -61,6 +52,11 @@
       white-space: nowrap;
     }
     .topbar button.active { background: #0a84ff; }
+
+    /* ── Todo o UI contra-espelha o html para texto normal ── */
+    .topbar, #hint, #panel, #segLabel, #debugBtn, #debug {
+      transform: scaleX(-1);
+    }
 
     /* hint "toca para ocultar" — aparece só em modelos com anomalias */
     #hint {
@@ -441,7 +437,7 @@ function showSegLabel(clientX, clientY, seg) {
   requestAnimationFrame(() => {
     const w = segLabel.offsetWidth;
     const h = segLabel.offsetHeight;
-    segLabel.style.left = (window.innerWidth - clientX - w / 2) + "px";
+    segLabel.style.left = (clientX - w / 2) + "px";
     segLabel.style.top  = (clientY - h - 16) + "px";
   });
 
