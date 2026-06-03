@@ -24,6 +24,21 @@
       transform-origin: center center;
     }
 
+    /* Todos os overlays de texto contra-espelham o model-viewer */
+    .topbar,
+    #hint,
+    #panel,
+    #overlay,
+    #segLabel,
+    #debugBtn,
+    #debug {
+      transform: scaleX(-1);
+    }
+
+    /* Corrige o translateX(-50%) da topbar e hint após o scaleX */
+    .topbar { transform: scaleX(-1) translateX(50%); }
+    #hint   { transform: scaleX(-1) translateX(50%); }
+
     .topbar {
       position: absolute;
       top: 12px;
@@ -55,7 +70,6 @@
       position: fixed;
       bottom: 18px;
       left: 50%;
-      transform: translateX(-50%) scaleX(-1);
       background: rgba(0,0,0,0.65);
       color: #ccc;
       font-size: 12px;
@@ -135,7 +149,6 @@
       z-index: 9999;
       opacity: 0;
       transition: opacity 0.2s ease;
-      transform: scaleX(-1);
     }
     #segLabel.visible { opacity: 1; }
 
@@ -431,7 +444,7 @@ function showSegLabel(clientX, clientY, seg) {
   requestAnimationFrame(() => {
     const w = segLabel.offsetWidth;
     const h = segLabel.offsetHeight;
-    segLabel.style.left = (window.innerWidth - clientX - w / 2) + "px";
+    segLabel.style.left = (clientX - w / 2) + "px";
     segLabel.style.top  = (clientY - h - 16) + "px";
   });
 
