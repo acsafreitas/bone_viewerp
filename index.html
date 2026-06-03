@@ -8,17 +8,13 @@
   <style>
     * { box-sizing: border-box; }
 
-    html {
-      transform: scaleX(-1);
-      transform-origin: center center;
-    }
-
     body {
       margin: 0;
       background: black;
       font-family: Arial, sans-serif;
       color: white;
       overflow: hidden;
+      transform-origin: center center;
     }
 
     model-viewer {
@@ -53,16 +49,12 @@
     }
     .topbar button.active { background: #0a84ff; }
 
-    /* ── Todo o UI contra-espelha o html para texto normal ── */
-    .topbar, #hint, #panel, #segLabel, #debugBtn, #debug {
-      transform: scaleX(-1);
-    }
-
     /* hint "toca para ocultar" — aparece só em modelos com anomalias */
     #hint {
       position: fixed;
       bottom: 18px;
       left: 50%;
+      transform: translateX(-50%); /* contra-espelha o body */
       background: rgba(0,0,0,0.65);
       color: #ccc;
       font-size: 12px;
@@ -295,12 +287,22 @@ const segmentConfig = {
     ]
   },
 
+    // ── CASE 3: Fixador externo + Tíbia partida ──────────────────
+  // primitive 0 → cinzento escuro  = Fixador Externo  (múltiplos hotspots ao longo da estrutura)
+  // primitive 1 → bege/amarelado   = Restante ossos do pé (ocultável, não é anomalia)
+  // primitive 2 → vermelho escuro  = Tíbia Partida
+  "Segmentation3_1.glb": {
+    segments: [
+      { primitiveIndex: 2, label: "Tíbia Partida",   size: "", color: "#ff4d4d", pos: "6.0210m 59.8490m -16.2220m"  },
+    ]
+  },
+
 };
 
 const fractureData = [
   { category: "Case 1", file: "Segmentation1_6.glb" },
   { category: "Case 2", file: "Segmentation2_1.glb" },
-  { category: "Case 3", file: "foot__ankle.glb"     },
+  { category: "Case 3", file: "Segmentation3_1.glb"     },
 ];
 
 const labels = {
@@ -420,7 +422,7 @@ function showHint(msg) {
   hint.textContent = msg;
   hint.classList.add("visible");
   clearTimeout(hintTimeout);
-  hintTimeout = setTimeout(() => hint.classList.remove("visible"), 3000);
+  hintTimeout = setTimeout(() => hint.classList.remove("visible"), 1500);
 }
 
 // ── Label flutuante ────────────────────────────────────────────
@@ -437,7 +439,7 @@ function showSegLabel(clientX, clientY, seg) {
   requestAnimationFrame(() => {
     const w = segLabel.offsetWidth;
     const h = segLabel.offsetHeight;
-    segLabel.style.left = (clientX - w / 2) + "px";
+    segLabel.style.left = (window.innerWidth - clientX - w / 2) + "px";
     segLabel.style.top  = (clientY - h - 16) + "px";
   });
 
