@@ -14,8 +14,6 @@
       font-family: Arial, sans-serif;
       color: white;
       overflow: hidden;
-      
-      
     }
 
     model-viewer {
@@ -50,12 +48,11 @@
     }
     .topbar button.active { background: #0a84ff; }
 
-    /* hint "toca para ocultar" — aparece só em modelos com anomalias */
     #hint {
       position: fixed;
       bottom: 18px;
       left: 50%;
-      transform: translateX(-50%); /* contra-espelha o body */
+      transform: translateX(-50%);
       background: rgba(0,0,0,0.65);
       color: #ccc;
       font-size: 12px;
@@ -128,7 +125,6 @@
     .model-item span { font-size: 13px; color: #ccc; }
     .model-item.active span { color: white; }
 
-    /* ── SEGMENT LABEL TOOLTIP ── */
     #segLabel {
       position: fixed;
       pointer-events: none;
@@ -144,7 +140,6 @@
       border-radius: 10px;
       padding: 10px 16px;
       text-align: center;
-      box-shadow: 0 0 14px rgba(10,132,255,0.35);
       white-space: nowrap;
     }
     .seg-label-name {
@@ -152,7 +147,6 @@
       font-weight: 700;
       letter-spacing: 0.4px;
       color: white;
-      text-shadow: 0 0 8px var(--lcolor, #0a84ff);
     }
     .seg-label-size {
       font-size: 12px;
@@ -175,7 +169,6 @@
     .hotspot::before {
       content: ''; width: 18px; height: 18px; border-radius: 50%;
       background: #0a84ff; border: 3px solid white;
-      box-shadow: 0 0 10px rgba(10,132,255,0.8), 0 0 20px rgba(10,132,255,0.4);
       transition: transform 0.15s;
     }
     .hotspot:hover::before, .hotspot.active::before { transform: scale(1.3); }
@@ -189,7 +182,6 @@
       padding: 12px 22px; border-radius: 10px; font-size: 24px; font-weight: 700;
       letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; opacity: 0;
       transition: opacity 0.15s; border: 2px solid rgba(10,132,255,0.8);
-      text-shadow: 0 0 8px rgba(10,132,255,0.9);
     }
     .hotspot .tooltip::after {
       content: ''; position: absolute; top: 100%; left: 50%;
@@ -197,20 +189,6 @@
       border-top-color: rgba(10,132,255,0.7);
     }
     .hotspot.active .tooltip { opacity: 1; }
-
-    #debugBtn { display:none !important;
-      position: absolute; bottom: 12px; left: 12px; z-index: 9999;
-      padding: 8px 12px; border: none; border-radius: 8px;
-      background: rgba(30,30,30,0.85); color: #aaa; font-size: 12px;
-      cursor: pointer; backdrop-filter: blur(6px);
-    }
-    #debugBtn.active { color: #00ff88; }
-
-    #debug { display:none !important;
-      position: fixed; bottom: 50px; left: 12px;
-      background: rgba(0,0,0,0.85); color: #00ff88; padding: 10px 14px;
-      border-radius: 10px; font: 13px monospace; z-index: 9999; display: none; max-width: 280px;
-    }
 
     @media (max-width: 600px) {
       #panel { width: 100%; right: -100%; }
@@ -246,12 +224,6 @@
   <div class="seg-label-arrow" id="segLabelArrow"></div>
 </div>
 
-<button onclick="toggleDebug()" id="debugBtn">⚙ Debug</button>
-<div id="debug">
-  <b style="color:white">Coordenadas 3D</b>
-  <pre id="coords" style="margin:4px 0 0;">Clica num osso...</pre>
-</div>
-
 <model-viewer
   id="viewer"
   src="foot__ankle.glb"
@@ -267,34 +239,29 @@
 </model-viewer>
 
 <script>
-// ── Config de segmentos/anomalias por modelo ───────────────────
 const segmentConfig = {
 
   "Segmentation1_6.glb": {
     segments: [
-      { primitiveIndex: 1, label: "Corpo Livre",              size: "", color: "#ff4d4d", pos: "-16.6481m 10.1325m -2.3308m"   },
-      { primitiveIndex: 2, label: "Megessostose",             size: "", color: "#ffaa00", pos: "12.4892m 6.0165m -62.8223m"    },
-      { primitiveIndex: 3, label: "Fratura Falange Proximal", size: "", color: "#00e5ff", pos: "34.1863m -72.1478m 87.9066m"   },
+      { primitiveIndex: 1, label: "Loose Body",              size: "", color: "#ff4d4d", pos: "-16.6481m 10.1325m -2.3308m"   },
+      { primitiveIndex: 2, label: "Megesostosis",             size: "", color: "#ffaa00", pos: "12.4892m 6.0165m -62.8223m"    },
+      { primitiveIndex: 3, label: "Proximal Phalanx Fracture", size: "", color: "#00e5ff", pos: "34.1863m -72.1478m 87.9066m"   },
     ]
   },
 
   "Segmentation2_1.glb": {
     segments: [
-      { primitiveIndex: 1, label: "Corpo Livre", size: "", color: "#ff4d4d", pos: "1.8802m 44.6687m -60.8941m"   },
-      { primitiveIndex: 2, label: "Corpo Livre", size: "", color: "#ffaa00", pos: "18.6720m -21.3461m -27.7317m" },
-      { primitiveIndex: 3, label: "Corpo Livre", size: "", color: "#00e5ff", pos: "-21.5648m 12.1754m 16.4439m"  },
-      { primitiveIndex: 4, label: "Corpo Livre", size: "", color: "#a855f7", pos: "-24.1262m 49.6685m -41.7960m" },
-      { primitiveIndex: 5, label: "Corpo Livre", size: "", color: "#22c55e", pos: "-27.0568m 40.6654m -31.7664m" },
+      { primitiveIndex: 1, label: "Loose Body", size: "", color: "#ff4d4d", pos: "1.8802m 44.6687m -60.8941m"   },
+      { primitiveIndex: 2, label: "Loose Body", size: "", color: "#ffaa00", pos: "18.6720m -21.3461m -27.7317m" },
+      { primitiveIndex: 3, label: "Loose Body", size: "", color: "#00e5ff", pos: "-21.5648m 12.1754m 16.4439m"  },
+      { primitiveIndex: 4, label: "Loose Body", size: "", color: "#a855f7", pos: "-24.1262m 49.6685m -41.7960m" },
+      { primitiveIndex: 5, label: "Loose Body", size: "", color: "#22c55e", pos: "-27.0568m 40.6654m -31.7664m" },
     ]
   },
 
-    // ── CASE 3: Fixador externo + Tíbia partida ──────────────────
-  // primitive 0 → cinzento escuro  = Fixador Externo  (múltiplos hotspots ao longo da estrutura)
-  // primitive 1 → bege/amarelado   = Restante ossos do pé (ocultável, não é anomalia)
-  // primitive 2 → vermelho escuro  = Tíbia Partida
   "Segmentation3_3.glb": {
     segments: [
-      { primitiveIndex: 2, label: "Fratura da Tíbia",   size: "", color: "#ff4d4d", pos: "6.0210m 59.8490m -16.2220m"  },
+      { primitiveIndex: 2, label: "Tibia Fracture ", size: "", color: "#ff4d4d", pos: "6.0210m 59.8490m -16.2220m" },
     ]
   },
 
@@ -303,7 +270,7 @@ const segmentConfig = {
 const fractureData = [
   { category: "Case 1", file: "Segmentation1_6.glb" },
   { category: "Case 2", file: "Segmentation2_1.glb" },
-  { category: "Case 3", file: "Segmentation3_3.glb"     },
+  { category: "Case 3", file: "Segmentation3_3.glb" },
 ];
 
 const labels = {
@@ -333,14 +300,10 @@ const labels = {
   ]
 };
 
-// ── Estado ─────────────────────────────────────────────────────
-let currentModel    = null;
-let debugMode       = false;
-let activeModelItem = null;
-let labelTimeout    = null;
-// Set de primitiveIndex dos ossos ocultados pelo utilizador
-let hiddenPrimitives = new Set();
-// Guarda cor original por primitiveIndex: { r, g, b, a, alphaMode }
+let currentModel         = null;
+let activeModelItem      = null;
+let labelTimeout         = null;
+let hiddenPrimitives     = new Set();
 let originalMaterialState = {};
 
 const viewer        = document.getElementById("viewer");
@@ -351,14 +314,12 @@ const labelSize     = document.getElementById("segLabelSize");
 const labelArrow    = document.getElementById("segLabelArrow");
 const hint          = document.getElementById("hint");
 
-// ── Helpers de material ────────────────────────────────────────
-
 function getMaterial(primitiveIndex) {
   return viewer.model?.materials?.[primitiveIndex] ?? null;
 }
 
 function saveMaterialState(primitiveIndex) {
-  if (originalMaterialState[primitiveIndex] !== undefined) return; // já guardado
+  if (originalMaterialState[primitiveIndex] !== undefined) return;
   const mat = getMaterial(primitiveIndex);
   if (!mat) return;
   const pbr = mat.pbrMetallicRoughness;
@@ -389,8 +350,6 @@ function restoreMaterial(primitiveIndex) {
   if (pbr) pbr.setBaseColorFactor([orig.r, orig.g, orig.b, orig.a]);
 }
 
-// ── Ocultar/restaurar osso pelo primitiveIndex ─────────────────
-
 function hidePrimitive(primIdx) {
   saveMaterialState(primIdx);
   setMaterialAlpha(primIdx, 0);
@@ -401,8 +360,6 @@ function restoreAllHidden() {
   hiddenPrimitives.forEach(idx => restoreMaterial(idx));
   hiddenPrimitives.clear();
 }
-
-// ── Anomalias do modelo actual ─────────────────────────────────
 
 function getAnomalySet() {
   const cfg = segmentConfig[currentModel];
@@ -416,17 +373,13 @@ function findSegmentByPrimitive(primitiveIndex) {
   return cfg.segments.find(s => s.primitiveIndex === primitiveIndex) ?? null;
 }
 
-// ── Hint ───────────────────────────────────────────────────────
 let hintTimeout = null;
-
 function showHint(msg) {
   hint.textContent = msg;
   hint.classList.add("visible");
   clearTimeout(hintTimeout);
   hintTimeout = setTimeout(() => hint.classList.remove("visible"), 1500);
 }
-
-// ── Label flutuante ────────────────────────────────────────────
 
 function showSegLabel(clientX, clientY, seg) {
   labelName.textContent = seg.label;
@@ -440,8 +393,12 @@ function showSegLabel(clientX, clientY, seg) {
   requestAnimationFrame(() => {
     const w = segLabel.offsetWidth;
     const h = segLabel.offsetHeight;
-    segLabel.style.left = (clientX - w / 2) + "px";
-    segLabel.style.top  = (clientY - h - 16) + "px";
+    let left = clientX - w / 2;
+    let top  = clientY - h - 16;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    top  = Math.max(8, top);
+    segLabel.style.left = left + "px";
+    segLabel.style.top  = top  + "px";
   });
 
   clearTimeout(labelTimeout);
@@ -453,8 +410,6 @@ function hideSegLabel() {
   segLabel.classList.remove("visible");
 }
 
-// ── Viewer click ───────────────────────────────────────────────
-
 viewer.addEventListener("click", e => {
   viewer.querySelectorAll(".hotspot").forEach(h => h.classList.remove("active"));
 
@@ -462,19 +417,6 @@ viewer.addEventListener("click", e => {
   const lx = e.clientX - rect.left;
   const ly = e.clientY - rect.top;
 
-  // Debug: coordenadas 3D
-  if (debugMode) {
-    const hit = viewer.positionAndNormalFromPoint(lx, ly);
-    if (hit) {
-      const p = hit.position;
-      document.getElementById("coords").textContent =
-        `${p.x.toFixed(4)}m ${p.y.toFixed(4)}m ${p.z.toFixed(4)}m`;
-    } else {
-      document.getElementById("coords").textContent = "Nenhum osso aqui";
-    }
-  }
-
-  // Só actua se o modelo actual tem segmentos de anomalia
   const hasSegs = !!segmentConfig[currentModel];
 
   try {
@@ -482,21 +424,13 @@ viewer.addEventListener("click", e => {
     if (surface != null) {
       const primIdx = surface.primitiveIndex ?? surface.primitive ?? 0;
 
-      if (debugMode) {
-        const matName = viewer.model?.materials?.[primIdx]?.name ?? "?";
-        document.getElementById("coords").textContent +=
-          `\nprimitive: ${primIdx}  material: ${matName}`;
-      }
-
       if (hasSegs) {
         const anomalies = getAnomalySet();
 
         if (anomalies.has(primIdx)) {
-          // Clicou numa anomalia → mostrar label
           const seg = findSegmentByPrimitive(primIdx);
           if (seg) showSegLabel(e.clientX, e.clientY, seg);
         } else {
-          // Clicou num osso normal → ocultar esse osso
           saveMaterialState(primIdx);
           hidePrimitive(primIdx);
           hideSegLabel();
@@ -507,7 +441,6 @@ viewer.addEventListener("click", e => {
     }
   } catch (_) {}
 
-  // Clicou no fundo vazio — restaura todos os ossos ocultos
   if (hasSegs && hiddenPrimitives.size > 0) {
     restoreAllHidden();
     hideSegLabel();
@@ -517,20 +450,13 @@ viewer.addEventListener("click", e => {
   }
 });
 
-// ── Modelo carregado ───────────────────────────────────────────
-
 viewer.addEventListener("load", () => {
-  // Limpa cache de estados originais (novo modelo)
   originalMaterialState = {};
   hiddenPrimitives.clear();
-
-  // Se o modelo tem anomalias, mostra o hint uma vez
   if (segmentConfig[currentModel]) {
     showHint("Toca num osso para o ocultar");
   }
 });
-
-// ── Painel ─────────────────────────────────────────────────────
 
 function openPanel() {
   document.getElementById("panel").classList.add("open");
@@ -560,8 +486,6 @@ function buildPanel() {
   });
 }
 
-// ── Carrega modelo ─────────────────────────────────────────────
-
 function loadModel(file, btn) {
   document.documentElement.requestFullscreen().catch(() => {});
   currentModel = file;
@@ -574,8 +498,6 @@ function loadModel(file, btn) {
     .forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
 }
-
-// ── Hotspots ───────────────────────────────────────────────────
 
 function createHotspots(modelFile) {
   viewer.querySelectorAll(".hotspot, .hotspot-seg").forEach(el => el.remove());
@@ -619,18 +541,6 @@ function createHotspots(modelFile) {
     });
   }
 }
-
-// ── Debug ──────────────────────────────────────────────────────
-
-function toggleDebug() {
-  debugMode = !debugMode;
-  const btn = document.getElementById("debugBtn");
-  document.getElementById("debug").style.display = debugMode ? "block" : "none";
-  btn.classList.toggle("active", debugMode);
-  btn.textContent = debugMode ? "⚙ Debug ON" : "⚙ Debug";
-}
-
-// ── Init ───────────────────────────────────────────────────────
 
 buildPanel();
 currentModel = "foot__ankle.glb";
