@@ -27,7 +27,7 @@
       position: absolute;
       top: 12px;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translateX(50%);
       display: flex;
       gap: 8px;
       z-index: 9999;
@@ -54,7 +54,7 @@
       position: fixed;
       bottom: 18px;
       left: 50%;
-      transform: translateX(-50%); /* contra-espelha o body */
+      transform: translateX(50%); /* contra-espelha o body */
       background: rgba(0,0,0,0.65);
       color: #ccc;
       font-size: 12px;
@@ -184,7 +184,7 @@
 
     .hotspot .tooltip {
       position: absolute; bottom: calc(100% - 4px); left: 50%;
-      transform: translateX(-50%); background: #000; color: white;
+      transform: translateX(50%); background: #000; color: white;
       padding: 12px 22px; border-radius: 10px; font-size: 24px; font-weight: 700;
       letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; opacity: 0;
       transition: opacity 0.15s; border: 2px solid rgba(10,132,255,0.8);
@@ -192,7 +192,7 @@
     }
     .hotspot .tooltip::after {
       content: ''; position: absolute; top: 100%; left: 50%;
-      transform: translateX(-50%); border: 6px solid transparent;
+      transform: translateX(50%); border: 6px solid transparent;
       border-top-color: rgba(10,132,255,0.7);
     }
     .hotspot.active .tooltip { opacity: 1; }
