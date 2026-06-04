@@ -14,7 +14,6 @@
       font-family: Arial, sans-serif;
       color: white;
       overflow: hidden;
-      transform-origin: center center;
     }
 
     model-viewer {
@@ -197,6 +196,8 @@
     }
     .hotspot.active .tooltip { opacity: 1; }
 
+    
+
     @media (max-width: 600px) {
       #panel { width: 100%; right: -100%; }
       .topbar button { font-size: 13px; padding: 9px 12px; }
@@ -230,6 +231,8 @@
   </div>
   <div class="seg-label-arrow" id="segLabelArrow"></div>
 </div>
+
+
 
 <model-viewer
   id="viewer"
@@ -314,7 +317,6 @@ const labels = {
 
 // ── Estado ─────────────────────────────────────────────────────
 let currentModel    = null;
-let debugMode       = false;
 let activeModelItem = null;
 let labelTimeout    = null;
 // Set de primitiveIndex dos ossos ocultados pelo utilizador
@@ -419,7 +421,7 @@ function showSegLabel(clientX, clientY, seg) {
   requestAnimationFrame(() => {
     const w = segLabel.offsetWidth;
     const h = segLabel.offsetHeight;
-    segLabel.style.left = (window.innerWidth - clientX - w / 2) + "px";
+    segLabel.style.left = (clientX - w / 2) + "px";
     segLabel.style.top  = (clientY - h - 16) + "px";
   });
 
@@ -440,17 +442,6 @@ viewer.addEventListener("click", e => {
   const rect = viewer.getBoundingClientRect();
   const lx = e.clientX - rect.left;
   const ly = e.clientY - rect.top;
-
-  // Debug: coordenadas 3D
-  if (debugMode) {
-    const hit = viewer.positionAndNormalFromPoint(lx, ly);
-    if (hit) {
-      const p = hit.position;
-      document.getElementById("coords").textContent =
-        `${p.x.toFixed(4)}m ${p.y.toFixed(4)}m ${p.z.toFixed(4)}m`;
-    } else {
-      document.getElementById("coords").textContent = "Nenhum osso aqui";
-    }
   }
 
   // Só actua se o modelo actual tem segmentos de anomalia
@@ -460,12 +451,6 @@ viewer.addEventListener("click", e => {
     const surface = viewer.surfaceFromPoint ? viewer.surfaceFromPoint(lx, ly) : null;
     if (surface != null) {
       const primIdx = surface.primitiveIndex ?? surface.primitive ?? 0;
-
-      if (debugMode) {
-        const matName = viewer.model?.materials?.[primIdx]?.name ?? "?";
-        document.getElementById("coords").textContent +=
-          `\nprimitive: ${primIdx}  material: ${matName}`;
-      }
 
       if (hasSegs) {
         const anomalies = getAnomalySet();
@@ -598,6 +583,9 @@ function createHotspots(modelFile) {
     });
   }
 }
+
+// ── Debug ──────────────────────────────────────────────────────
+
 
 
 // ── Init ───────────────────────────────────────────────────────
