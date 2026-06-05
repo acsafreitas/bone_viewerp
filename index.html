@@ -487,7 +487,6 @@ function buildPanel() {
 }
 
 function loadModel(file, btn) {
-  document.documentElement.requestFullscreen().catch(() => {});
   currentModel = file;
   hideSegLabel();
   originalMaterialState = {};
